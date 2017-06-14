@@ -71,54 +71,30 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        HashMap<UTXO, ArrayList<Transaction>> hashMap;
-        hashMap = new HashMap<UTXO, ArrayList<Transaction>>();
-
-        HashSet<Transaction> validPossibleTxs = new HashSet<Transaction>();
+        HashSet<Transaction> validTxs = new HashSet<Transaction>();
+        HashSet<UTXO> spentUtxos = new HashSet<UTXO>();
         for (Transaction tx: possibleTxs) {
             if (!isValidTx(tx)) {
                 continue;
             }
-            validPossibleTxs.add(tx);
+
+            validTxs.add(tx);
             for (Transaction.Input in: tx.getInputs()) {
                 UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
-                if (hashMap.containsKey(utxo)) {
-                    hashMap.get(utxo).add(tx);
-                }
-                else {
-                    ArrayList<Transaction> alTxs = new ArrayList<Transaction>();
-                    alTxs.add(tx);
-                    hashMap.put(utxo, alTxs);
-                }
-                
+                spentUtxos.add(utxo);
+                utxoPool.removeUTXO(utxo);
             }
-        }
 
-        Iterator<Map.Entry<UTXO, ArrayList<Transaction>>> entries = hashMap.entrySet().iterator();
-        while (entries.hasNext()) {
-            Map.Entry<UTXO, ArrayList<Transaction>> entry = entries.next();
-            if (entry.getValue().size() > 1) {
-                for (Transaction tx: entry.getValue()) {
-                    validPossibleTxs.remove(tx);
-                }
-            }
-        }
-
-        for (Transaction tx: validPossibleTxs) {
             int i = 0;
             for (Transaction.Output out: tx.getOutputs()) {
                 UTXO utxo = new UTXO(tx.getHash(), i++);
                 utxoPool.addUTXO(utxo, out);
             }
-            for (Transaction.Input in: tx.getInputs()) {
-                UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
-                utxoPool.removeUTXO(utxo);
-            }
         }
 
-        Transaction[] arrayOfValidTxs = new Transaction[validPossibleTxs.size()];
+        Transaction[] arrayOfValidTxs = new Transaction[validTxs.size()];
         int i = 0;
-        for (Transaction tx: validPossibleTxs) {
+        for (Transaction tx: validTxs) {
             arrayOfValidTxs[i++] = tx;
         }
         return arrayOfValidTxs;
