@@ -71,7 +71,6 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        HashSet<Transaction> validTxs = new HashSet<Transaction>();
         HashMap<UTXO, ArrayList<Transaction>> hashMap;
         hashMap = new HashMap<UTXO, ArrayList<Transaction>>();
 
@@ -98,27 +97,28 @@ public class TxHandler {
         Iterator<Map.Entry<UTXO, ArrayList<Transaction>>> entries = hashMap.entrySet().iterator();
         while (entries.hasNext()) {
             Map.Entry<UTXO, ArrayList<Transaction>> entry = entries.next();
-            if (entry.getValue().size() == 1) {
-                Transaction tx = entry.getValue().get(0);
-                
-                if (validPossibleTxs.contains(tx) && validTxs.add(tx)) {
-                    int i = 0;
-                    for (Transaction.Output out: tx.getOutputs()) {
-                        UTXO utxo = new UTXO(tx.getHash(), i++);
-                        utxoPool.addUTXO(utxo, out);
-                    }
-                }
-            }
-            else {
+            if (entry.getValue().size() > 1) {
                 for (Transaction tx: entry.getValue()) {
                     validPossibleTxs.remove(tx);
                 }
             }
         }
 
-        Transaction[] arrayOfValidTxs = new Transaction[validTxs.size()];
+        for (Transaction tx: validPossibleTxs) {
+            int i = 0;
+            for (Transaction.Output out: tx.getOutputs()) {
+                UTXO utxo = new UTXO(tx.getHash(), i++);
+                utxoPool.addUTXO(utxo, out);
+            }
+            for (Transaction.Input in: tx.getInputs()) {
+                UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
+                utxoPool.removeUTXO(utxo);
+            }
+        }
+
+        Transaction[] arrayOfValidTxs = new Transaction[validPossibleTxs.size()];
         int i = 0;
-        for (Transaction tx: validTxs) {
+        for (Transaction tx: validPossibleTxs) {
             arrayOfValidTxs[i++] = tx;
         }
         return arrayOfValidTxs;
