@@ -72,7 +72,6 @@ public class TxHandler {
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
         HashSet<Transaction> validTxs = new HashSet<Transaction>();
-        HashSet<UTXO> spentUtxos = new HashSet<UTXO>();
         for (Transaction tx: possibleTxs) {
             if (!isValidTx(tx)) {
                 continue;
@@ -81,7 +80,6 @@ public class TxHandler {
             validTxs.add(tx);
             for (Transaction.Input in: tx.getInputs()) {
                 UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
-                spentUtxos.add(utxo);
                 utxoPool.removeUTXO(utxo);
             }
 
